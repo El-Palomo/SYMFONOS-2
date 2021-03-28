@@ -58,6 +58,26 @@ Host script results:
 
 ```
 
+<img src="https://github.com/El-Palomo/SYMFONOS-2/blob/main/symfonos1.jpg" with=80% />
 
-<img src="https://github.com/El-Palomo/SYMFONOS-2lob/main/symfonos1.jpg" with=80% />
+### 2.2. Escaneo UDP
+
+```
+nmap -vv --reason -Pn -sU -sV -p 161 "--script=banner,(snmp* or ssl*) and not (brute or broadcast or dos or external or fuzzer)" -oN /root/Burpsuite/autorecon/10.10.10.151/scans/udp_161_snmp-nmap.txt -oX /root/Burpsuite/autorecon/10.10.10.151/scans/xml/udp_161_snmp_nmap.xml 10.10.10.151
+Nmap scan report for 10.10.10.151
+Host is up, received arp-response (0.00018s latency).
+Scanned at 2021-03-28 09:02:15 EDT for 23s
+
+PORT    STATE SERVICE REASON       VERSION
+161/udp open  snmp    udp-response net-snmp; net-snmp SNMPv3 server
+| snmp-info: 
+|   enterprise: net-snmp
+|   engineIDFormat: unknown
+|   engineIDData: 31ef6e1b567c305d00000000
+|   snmpEngineBoots: 7
+|_  snmpEngineTime: 12m51s
+MAC Address: 00:0C:29:A7:84:20 (VMware)
+```
+
+
 
